@@ -1,7 +1,10 @@
 import { fetch } from "./apiMock.js";
+import Emittery from "emittery";
 
 const promiseCache = new Map();
 const resourceCache = new Map();
+
+export const emitter = new Emittery();
 
 /**
  * public API
@@ -31,6 +34,14 @@ export function clearCache() {
   resourceCache.clear();
 }
 
+export function debugAsync() {
+  console.log("promiseCache");
+  console.log(...promiseCache);
+
+  console.log("resourceCache");
+  console.log(...resourceCache);
+}
+
 /**
  * internal functions
  */
@@ -54,10 +65,10 @@ function fetchResourceAsync(uri) {
 async function fetchRelationAsync(uri, relation) {
   const resource = await fetchResourceAsync(uri);
 
-  const link = resource?._links[relation];
+  const link = resource?.data?._links[relation];
 
   if (!Array.isArray(link)) {
-    return fetchResourceAsync(resource?._links[relation]);
+    return fetchResourceAsync(resource?.data?._links[relation]);
   }
 
   // collection --> make sure all items are loaded
@@ -71,7 +82,17 @@ async function fetchFromNetwork(uri) {
 
   // populate resourceCache with all resources contained in api response
   for (const [key, value] of Object.entries(apiResponse)) {
-    resourceCache.set(key, value);
+    let resource;
+    if (resourceCache.has(key)) {
+      resource = resourceCache.get(key);
+    } else {
+      resource = {};
+      resourceCache.set(key, resource);
+    }
+
+    resource.data = value; // careful to not override complete cache item
+
+    emitter.emit("resourceUpdated", key);
   }
 
   return resourceCache.get(uri);

@@ -1,6 +1,7 @@
 <script setup>
 import HelloWorld from "./components/HelloWorld.vue";
-import AsyncTest from "./components/AsyncTest.vue";
+// import AsyncTest from "./components/AsyncTest.vue";
+import ReactiveTest from "./components/ReactiveTest.vue";
 </script>
 
 <template>
@@ -19,7 +20,8 @@ import AsyncTest from "./components/AsyncTest.vue";
   </header>
 
   <main>
-    <AsyncTest />
+    <!-- <AsyncTest /> -->
+    <ReactiveTest />
   </main>
 </template>
 

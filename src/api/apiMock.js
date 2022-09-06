@@ -25,7 +25,9 @@ apiMockResponses["/entities/1"] = {
   },
 
   // embedded parent
-  "/entities/2": apiMockResponses["/entities/2"]["/entities/2"],
+  "/entities/2": JSON.parse(
+    JSON.stringify(apiMockResponses["/entities/2"]["/entities/2"])
+  ),
 };
 
 apiMockResponses["/entities/3"] = {
@@ -44,6 +46,19 @@ apiMockResponses["/entities"] = {
     _links: {
       self: "/entities",
       items: ["/entities/1", "/entities/2", "/entities/3"],
+    },
+  },
+};
+
+apiMockResponses["/api_call_with_sideeffect"] = {
+  "/api_call_with_sideeffect": {},
+  "/entities/2": {
+    property1: "???",
+    property2: "!!!",
+    _links: {
+      self: "/entities/2",
+      children: ["/entities/1"],
+      nonEmbeddedRelation: "/entities/3",
     },
   },
 };
