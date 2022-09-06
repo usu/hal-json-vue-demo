@@ -20,8 +20,8 @@ const asyncTest1 = async () => {
 
   console.log(entity1);
   console.log(JSON.parse(JSON.stringify(entity1)));
-  console.log(entity1.property1);
-  console.log(entity1.property2);
+  console.log(entity1.data.property1);
+  console.log(entity1.data.property2);
 
   // true --> returns the same response
   console.log(entity1 === entity1again);
