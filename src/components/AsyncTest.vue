@@ -8,20 +8,11 @@ import { getAsync, getRelationAsync, clearCache } from "@/api/async.js";
 // asyncTest1: fetching the same resource multiple times triggers single network request only
 const asyncTest1 = async () => {
   clearCache();
-
-  const entity1promise = getAsync("/entities/1");
-  const entity1againPromise = getAsync("/entities/1");
-
-  // true --> returns the same promise
-  console.log(entity1promise === entity1againPromise);
-
-  const entity1 = await entity1promise;
-  const entity1again = await entity1againPromise;
+  console.log("************* asyncTest1");
+  const entity1 = await getAsync("/entities/1");
+  const entity1again = await getAsync("/entities/1");
 
   console.log(entity1);
-  console.log(JSON.parse(JSON.stringify(entity1)));
-  console.log(entity1.data.property1);
-  console.log(entity1.data.property2);
 
   // true --> returns the same response
   console.log(entity1 === entity1again);
@@ -33,6 +24,7 @@ const asyncTest1 = async () => {
 // asyncTest2: embedded parent is loaded from cache (single network request only)
 const asyncTest2 = async () => {
   clearCache();
+  console.log("************* asyncTest2");
 
   const entity1parent = await getRelationAsync("/entities/1", "parent");
 
@@ -40,23 +32,22 @@ const asyncTest2 = async () => {
   console.log(entity1parent);
 };
 
-// asyncTest3: loading parent and loading entity directly results in same response
+// asyncTest3: loading parent and loading entity directly results in same response (but 2 simultaneous network requests)
 const asyncTest3 = async () => {
   clearCache();
+  console.log("************* asyncTest3");
 
   const entity1parentPromise = getRelationAsync("/entities/1", "parent");
   const entity2promise = getAsync("/entities/2");
-
-  // false --> not the same promise / 2 network requests are triggered
-  console.log(entity1parentPromise === entity2promise);
 
   // true --> in the end, returns the same response
   console.log((await entity1parentPromise) === (await entity2promise));
 };
 
-// asyncTest4: loading same relation twice triggers only 1 network request
+// asyncTest4: loading exactly same relation twice triggers only 1 network request
 const asyncTest4 = async () => {
   clearCache();
+  console.log("************* asyncTest4");
 
   const promise1 = getRelationAsync("/entities/1", "parent");
   const promise2 = getRelationAsync("/entities/1", "parent");
@@ -65,52 +56,48 @@ const asyncTest4 = async () => {
   console.log((await promise1) === (await promise2));
 };
 
-// asyncTest5:
+// asyncTest5: non-embedded entity is loaded with separate request
 const asyncTest5 = async () => {
   clearCache();
+  console.log("************* asyncTest5");
 
   await getAsync("/entities/1");
 
   getRelationAsync("/entities/2", "nonEmbeddedRelation");
-
-  getRelationAsync("/entities/1", "parent").then(() => {
-    getRelationAsync("/entities/2", "nonEmbeddedRelation");
-  });
-
-  // true --> returns the same response / only 1 network request is made
-  // console.log((await promise1) === (await promise2));
 };
 
-// asyncTest6:
+// asyncTest6: testing proxy to load relations
+/*
 const asyncTest6 = async () => {
   clearCache();
+  console.log("************* asyncTest6");
 
   const entity1 = await getAsync("/entities/1");
-
   console.log(entity1);
-  console.log(entity1.property1);
-  console.log(entity1.property2);
+
 
   // this needs proxies for the magic
   const promise = entity1.parent();
   console.log(promise);
   console.log(await promise);
-};
+};*/
 
-// asyncTest7:
+// asyncTest7: loading a collection (with items property)
 const asyncTest7 = async () => {
   clearCache();
+  console.log("************* asyncTest7");
 
   const entities = await getAsync("/entities");
   console.log(entities);
 
-  const items = await getRelationAsync("/entities", "items");
+  const items = await getRelationAsync("/entities", "items"); // at the moment treated generically like any other relation (more magic possible to cover this special case)
   console.log(items);
 };
 
-// asyncTest8:
+// asyncTest8: loading a relation which contains an array of links
 const asyncTest8 = async () => {
   clearCache();
+  console.log("************* asyncTest8");
 
   const entity2 = await getAsync("/entities/2");
   console.log(entity2);
@@ -121,13 +108,13 @@ const asyncTest8 = async () => {
 </script>
 
 <template>
-  <h1>Async tests</h1>
+  <h1>Async tests (check console)</h1>
   <div><button @click="asyncTest1">asyncTest1</button></div>
   <div><button @click="asyncTest2">asyncTest2</button></div>
   <div><button @click="asyncTest3">asyncTest3</button></div>
   <div><button @click="asyncTest4">asyncTest4</button></div>
   <div><button @click="asyncTest5">asyncTest5</button></div>
-  <div><button @click="asyncTest6">asyncTest6</button></div>
+  <!-- <div><button @click="asyncTest6">asyncTest6</button></div> -->
   <div><button @click="asyncTest7">asyncTest7</button></div>
   <div><button @click="asyncTest8">asyncTest8</button></div>
 </template>

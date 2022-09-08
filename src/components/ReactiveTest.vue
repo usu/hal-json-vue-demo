@@ -1,19 +1,22 @@
 <script setup>
 /*
-test async functionality
+test reactive functionality
 */
 
 import { getReactive, getRelationReactive } from "@/api/reactive.js";
 
-import { getAsync } from "@/api/async.js";
-
+// all of these are empty reactive objects, but will display data once the network request has finished
 const entity1 = getReactive("/entities/1");
 const entity1parent = getRelationReactive("/entities/1", "parent");
 const entity2 = getReactive("/entities/2");
 
-// reactiveTest1: load /api_call_with_sideeffect with comes with new data for /entities/2
+// reactiveTest1: load /api_call_with_sideeffect with comes with new data for /entities/1
 const reactiveTest1 = async () => {
-  await getAsync("/api_call_with_sideeffect");
+  // payload contains new data for /entities/1
+  // --> reactivity is triggered via triggerReactice
+  // --> entity1 shows new data for properties
+  // --> entity1parent still shows data for /entities/2, although it should now show /entities/3
+  getReactive("/api_call_with_sideeffect");
 };
 </script>
 

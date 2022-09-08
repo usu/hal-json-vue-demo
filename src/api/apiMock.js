@@ -1,5 +1,6 @@
-const timeoutDurationInMs = 500;
+const timeoutDurationInMs = 1000;
 
+// catalog of mock responses (already flattened as for example provided by hal-json-normalizer)
 const apiMockResponses = {};
 
 apiMockResponses["/entities/2"] = {
@@ -25,9 +26,7 @@ apiMockResponses["/entities/1"] = {
   },
 
   // embedded parent
-  "/entities/2": JSON.parse(
-    JSON.stringify(apiMockResponses["/entities/2"]["/entities/2"])
-  ),
+  "/entities/2": apiMockResponses["/entities/2"]["/entities/2"],
 };
 
 apiMockResponses["/entities/3"] = {
@@ -52,13 +51,12 @@ apiMockResponses["/entities"] = {
 
 apiMockResponses["/api_call_with_sideeffect"] = {
   "/api_call_with_sideeffect": {},
-  "/entities/2": {
-    property1: "???",
-    property2: "!!!",
+  "/entities/1": {
+    property1: "???????????????????????????",
+    property2: "!!!!!!!!!!!!!!!!!!!!!!!!!!!",
     _links: {
-      self: "/entities/2",
-      children: ["/entities/1"],
-      nonEmbeddedRelation: "/entities/3",
+      self: "/entities/1",
+      parent: "/entities/3",
     },
   },
 };
