@@ -1,6 +1,6 @@
-import { fetchResourceAsync, fetchRelationAsync } from "./async.js";
+import { fetchResourceAsync } from "./async.js";
 
-import { shallowRef } from "vue";
+import { shallowRef, watch } from "vue";
 
 // cache for reactive object. 1 entry per requested path (=uri or =uri + relation path)
 // Hence, 1 resource can have multiple entries if requested via different paths
@@ -37,11 +37,21 @@ async function fetchResourceAndUpdateReactive(uri, reactiveObject) {
 }
 
 async function fetchRelationAndUpdateReactive(uri, relation, reactiveObject) {
-  const resource = await fetchRelationAsync(uri, relation);
+  const resource = await fetchResourceAsync(uri);
 
-  // replacing the complete value of a shallowRef is reactive
-  // however: if any data within resource changes, the reactivity system wouldn't know (manual trigger of reactivity needed)
-  reactiveObject.value = resource;
+  // because resource is a reactive object, `fetchResourceAsync` is triggered, whenever `resource?.data?._links[relation]` changes
+  watch(
+    () => resource?.data?._links[relation],
+    async () => {
+      console.log(
+        `${uri} ${relation} changed to ${resource?.data?._links[relation]} - reloading new data...`
+      );
+      reactiveObject.value = await fetchResourceAsync(
+        resource?.data?._links[relation]
+      );
+    },
+    { immediate: true }
+  );
 }
 
 function getReactiveFromCache(cacheKey) {
