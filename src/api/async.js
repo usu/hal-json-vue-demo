@@ -15,9 +15,9 @@ export const emitter = new Emittery();
  */
 export function getAsync(uri) {
   // Unwrap the data
-  return fetchResourceAsync(uri);
+  return fetchResourceAsync(uri).then((resource) => resource.data);
 
-  // Or: Use proxies for more magic:
+  // Or: Use proxies for more magic
   /*
   return fetchResourceAsync(uri).then(
     (resource) => new ResourceProxy(resource)
@@ -26,9 +26,15 @@ export function getAsync(uri) {
 
 export function getRelationAsync(uri, relation) {
   // Unwrap the data
-  return fetchRelationAsync(uri, relation);
+  return fetchRelationAsync(uri, relation).then((resource) => {
+    if (!Array.isArray(resource)) {
+      return resource.data;
+    }
 
-  // Returning resource does the job at the moment. Use proxies for more magic:
+    return resource.map((item) => item.data);
+  });
+
+  // Or: Use proxies for more magic
   /*
   return fetchRelationAsync(uri, relation).then(
     (resource) => new ResourceProxy(resource)
