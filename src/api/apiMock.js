@@ -59,6 +59,13 @@ apiMockResponses["/api_call_with_sideeffect"] = {
       parent: "/entities/3",
     },
   },
+  "/entities": {
+    count: 2,
+    _links: {
+      self: "/entities",
+      items: ["/entities/1", "/entities/2"],
+    },
+  },
 };
 
 export function fetch(uri) {

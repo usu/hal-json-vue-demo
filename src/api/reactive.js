@@ -1,4 +1,4 @@
-import { fetchResourceAsync } from "./async.js";
+import { fetchResourceAsync, fetchRelationAsync } from "./async.js";
 
 import { shallowRef, watch } from "vue";
 
@@ -39,16 +39,14 @@ async function fetchResourceAndUpdateReactive(uri, reactiveObject) {
 async function fetchRelationAndUpdateReactive(uri, relation, reactiveObject) {
   const resource = await fetchResourceAsync(uri);
 
-  // because resource is a reactive object, `fetchResourceAsync` is triggered, whenever `resource?.data?._links[relation]` changes
+  // because resource is a reactive object, `fetchRelationAsync` is triggered, whenever `resource?.data?._links[relation]` changes
   watch(
     () => resource?.data?._links[relation],
-    async () => {
+    async (newLink) => {
       console.log(
-        `${uri} ${relation} changed to ${resource?.data?._links[relation]} - reloading new data...`
+        `${uri} ${relation} changed to ${newLink} - reloading new data...`
       );
-      reactiveObject.value = await fetchResourceAsync(
-        resource?.data?._links[relation]
-      );
+      reactiveObject.value = await fetchRelationAsync(uri, relation);
     },
     { immediate: true }
   );
