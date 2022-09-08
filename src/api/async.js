@@ -1,14 +1,11 @@
 import { fetch } from "./apiMock.js";
-import Emittery from "emittery";
+import { reactive } from "vue";
 
 // cache for actual resource data (in raw format as provided by the fetcher). 1 entry per known uri (either requested uri or detected in response)
 const resourceCache = new Map();
 
 // cache for loading promises. 1 entry per requested uri
 const promiseCache = new Map();
-
-// event system used to signal changes in individual resources
-export const emitter = new Emittery();
 
 /**
  * public API
@@ -86,12 +83,10 @@ async function fetchFromNetwork(uri) {
   for (const [key, value] of Object.entries(apiResponse)) {
     let resource = resourceCache.get(key);
     if (!resource) {
-      resourceCache.set(key, (resource = {}));
+      resourceCache.set(key, (resource = reactive({})));
     }
 
     resource.data = value; // careful to not override complete cache item to not destroy linking from any other objects
-
-    emitter.emit("resourceUpdated", key); // signal update of resource
   }
 
   return resourceCache.get(uri);
