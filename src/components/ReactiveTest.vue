@@ -3,13 +3,23 @@
 test reactive functionality
 */
 
-import { getReactive, getRelationReactive } from "@/api/reactive.js";
+import { getReactive } from "@/api/reactive.js";
+
+import { computed } from "vue";
 
 // all of these are empty reactive objects, but will display data once the network request has finished
 const entity1 = getReactive("/entities/1");
-const entity1parent = getRelationReactive("/entities/1", "parent");
+const entity1property1 = computed(() => entity1.resource?.data?.property1);
+
+const entity1_parent = entity1.getRelation("parent");
+console.log(entity1_parent === entity1.getRelation("parent")); // true --> returns the same object
+
+const entity1_parent_nonEmbeddedRelation = entity1
+  .getRelation("parent")
+  .getRelation("nonEmbeddedRelation");
+
 const entity2 = getReactive("/entities/2");
-const allEntities = getRelationReactive("/entities", "items");
+const allEntities = getReactive("/entities").getRelation("items");
 
 // reactiveTest1: load /api_call_with_sideeffect with comes with new data for /entities/1
 const reactiveTest1 = async () => {
@@ -27,9 +37,15 @@ const reactiveTest1 = async () => {
 
   <h2>Entity1</h2>
   <pre>{{ entity1 }}</pre>
+  entity1.property1: {{ entity1.resource?.data?.property1 }}<br />
+  entity1.property1: {{ entity1property1 }}<br />
 
   <h2>Entity1#parent</h2>
-  <pre>{{ entity1parent }}</pre>
+  <pre>{{ entity1_parent }}</pre>
+
+  <h2>entitiy1#parent#nonEmbeddedRelation:</h2>
+  <pre>{{ entity1_parent_nonEmbeddedRelation }}</pre>
+  <br />
 
   <h2>Entity2</h2>
   <pre>{{ entity2 }}</pre>

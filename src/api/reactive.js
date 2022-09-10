@@ -1,72 +1,120 @@
 import { fetchResourceAsync, fetchRelationAsync } from "./async.js";
+import { watch, shallowReactive } from "vue";
 
-import { shallowRef, watch } from "vue";
-
-// cache for reactive object. 1 entry per requested path (=uri or =uri + relation path)
+// cache for reactive resource loaders. 1 entry per requested path (=uri or =uri + relation path)
 // Hence, 1 resource can have multiple entries if requested via different paths
 // Equivalent to a LoadingResource/LoadingProxy
-const reactiveCache = new Map();
+const resourceLoaderCache = new Map();
 
 /**
  * External API
  */
 
 export function getReactive(uri) {
-  const reactiveObject = getReactiveFromCache(uri);
-  fetchResourceAndUpdateReactive(uri, reactiveObject);
-  return reactiveObject;
-}
-
-export function getRelationReactive(uri, relation) {
-  // at the moment, only 1 nesting level is supported, however the concept could be easily extended
-  // e.g. "/subchild#parent#parent" and "/child#parent" and "/parent" could be 3 different reactive objects all pointing to the same resource
-  const reactiveObject = getReactiveFromCache(`${uri}#${relation}`);
-  fetchRelationAndUpdateReactive(uri, relation, reactiveObject);
-  return reactiveObject;
+  const resourceLoader = getLoaderFromCache(uri);
+  resourceLoader.loadResource(fetchResourceAsync(uri));
+  return resourceLoader;
 }
 
 /**
  * Internal API
  */
-async function fetchResourceAndUpdateReactive(uri, reactiveObject) {
-  const resource = await fetchResourceAsync(uri);
-
-  // replacing the complete value of a shallowRef is reactive
-  // however: if any data within resource changes, the reactivity system wouldn't know (manual trigger of reactivity needed)
-  reactiveObject.value = resource;
+function getRelationReactive(
+  parentRequestPath,
+  parentResourcePromise,
+  relation
+) {
+  const resourceLoader = getLoaderFromCache(`${parentRequestPath}#${relation}`);
+  resourceLoader.loadResource(
+    fetchRelationAndWatchForChanges(
+      parentResourcePromise,
+      relation,
+      resourceLoader
+    )
+  );
+  return resourceLoader;
 }
 
-async function fetchRelationAndUpdateReactive(uri, relation, reactiveObject) {
-  const resource = await fetchResourceAsync(uri);
+async function fetchRelationAndWatchForChanges(
+  parentResourcePromise,
+  relation,
+  resourceLoader
+) {
+  const parentResource = await parentResourcePromise;
+  const uri = parentResource.data._links.self;
 
   // because resource is a reactive object, `fetchRelationAsync` is triggered, whenever `resource?.data?._links[relation]` changes
   watch(
-    () => resource?.data?._links[relation],
+    () => parentResource?.data?._links[relation],
     async (newLink) => {
       console.log(
         `${uri} ${relation} changed to ${newLink} - reloading new data...`
       );
-      reactiveObject.value = await fetchRelationAsync(uri, relation);
-    },
-    { immediate: true }
+
+      resourceLoader.loadResource(fetchRelationAsync(uri, relation));
+
+      // TODO: only reloading this resourceLoader is not enough. All subkeys need to be reloaded as well
+      // Example: `parent` link on `/entity1` changes. Then we need to reload `/entity1#parent` as well as `/entity1#parent#parent` or any other subkeys of `/entity1#parent`
+      // Maybe it's also better to move responsibility for this watcher into the ResourceLoader class...
+    }
   );
+
+  return fetchRelationAsync(uri, relation);
 }
 
-function getReactiveFromCache(cacheKey) {
-  if (reactiveCache.has(cacheKey)) {
-    return reactiveCache.get(cacheKey);
+function getLoaderFromCache(requestPath) {
+  if (resourceLoaderCache.has(requestPath)) {
+    return resourceLoaderCache.get(requestPath);
   }
 
   // if no cache hit --> initialize empty shallow reactive object
-  const reactiveObject = shallowRef({});
-  reactiveCache.set(cacheKey, reactiveObject);
-  return reactiveObject;
+  const resourceLoader = shallowReactive(new ResourceLoader(requestPath));
+  resourceLoaderCache.set(requestPath, resourceLoader);
+  return resourceLoader;
 }
 
 /**
  * Support / debug API
  */
 export function debugReactive() {
-  console.log("reactiveCache");
-  console.log(...reactiveCache);
+  console.log("resourceLoaderCache");
+  console.log(...resourceLoaderCache);
+}
+
+/**
+ * ResourceLoader class (part of public API)
+ * (might be enhanced with Proxy functionality later)
+ */
+
+class ResourceLoader {
+  resourcePromise = null; // promise which is loading (or has loaded) `resource`
+  resource = null; // pointer to reactive `resource` object from async module
+  requestPath = null; // initial requestPath (e.g. '/entity1#parent#parent`)
+
+  constructor(requestPath, resource = null) {
+    this.requestPath = requestPath;
+    this.resource = resource;
+  }
+
+  get uriOrCacheKey() {
+    if (this.resource?.data?._links?.self) {
+      return this.resource.data._links.self;
+    }
+
+    return this.requestPath;
+  }
+
+  getRelation(relation) {
+    return getRelationReactive(
+      this.uriOrCacheKey,
+      this.resourcePromise,
+      relation
+    );
+  }
+
+  async loadResource(promise) {
+    this.resourcePromise = promise;
+    this.resource = await promise; // works because `this` points to the reactive Proxy, and not to ResourceLoader directly
+    return this.resource;
+  }
 }
